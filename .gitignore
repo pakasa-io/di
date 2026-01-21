@@ -1,0 +1,49 @@
+# GoLand
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+vendor/
+bin/
+dist/
+
+# Test coverage
+*.coverprofile
+coverage.html
+coverage.txt
+coverage.out
+
+# Binaries
+__debug_bin*
