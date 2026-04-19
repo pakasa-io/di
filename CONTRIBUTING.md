@@ -1,59 +1,52 @@
+# Contributing
 
----
+Thanks for contributing to `di`.
 
-# `CONTRIBUTING.md` (MIT-aligned)
+## Development Setup
 
-```md
-# Contributing to pakasa-io/di
+Requirements:
 
-Thank you for considering contributing to this project.
+- Go version compatible with [go.mod](go.mod)
+- `git`
 
-This library is intended to be a small, dependable piece of Go infrastructure.
-Contributions should favor clarity, correctness, and long-term maintainability
-over cleverness.
-
----
-
-## License
-
-By contributing to this repository, you agree that your contributions will be
-licensed under the **MIT License**, the same license as the project.
-
-You retain copyright to your contributions.
-
-No Contributor License Agreement (CLA) is required.
-
----
-
-## What Makes a Good Contribution
-
-We especially welcome contributions that:
-
-- improve developer experience or error clarity
-- simplify APIs without reducing correctness
-- add focused tests for edge cases
-- improve documentation or examples
-- fix real bugs with clear reproduction steps
-
-Please open an issue before making large or architectural changes.
-
----
-
-## Coding Guidelines
-
-- Follow standard Go formatting (`gofmt`)
-- Prefer explicitness over abstraction
-- Avoid unnecessary reflection or global state
-- Keep exported APIs small and intentional
-- Public types and functions must have doc comments
-
----
-
-## Tests
-
-- All new functionality should include tests
-- Bug fixes should include a failing test first
-- Run all tests before submitting:
+Clone the repository and run the standard checks from the module root:
 
 ```bash
 go test ./...
+go test -race ./...
+go vet ./...
+go install honnef.co/go/tools/cmd/staticcheck@latest
+"$(go env GOPATH)/bin/staticcheck" ./...
+```
+
+## Project Expectations
+
+When changing public behavior:
+
+- add or update tests
+- update `README.md` when the change affects the main usage path
+- update `docs/guides/` when the change adds or changes a user-facing feature
+- preserve the non-panicking default API shape where possible; `Must*` helpers are the panic-oriented opt-in path
+
+When changing exported APIs:
+
+- prefer additive changes over breaking changes
+- keep naming and generic API shape consistent with the existing surface
+- include examples or documentation for new entry points
+
+## Pull Requests
+
+Before opening a pull request:
+
+1. Ensure the worktree is clean except for the intended changes.
+2. Run the checks listed above.
+3. Summarize the behavior change clearly.
+4. Call out any breaking changes explicitly.
+
+## Documentation
+
+Useful repo entry points:
+
+- [README.md](README.md)
+- [docs/guides/README.md](docs/guides/README.md)
+- [RELEASING.md](RELEASING.md)
