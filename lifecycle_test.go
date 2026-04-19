@@ -291,3 +291,56 @@ func TestResolveAllFromChildUsesNearestOverride(t *testing.T) {
 		t.Fatalf("expected child override to take precedence, got %#v", values)
 	}
 }
+
+func TestNestedOverridesRestorePreviousOverride(t *testing.T) {
+	prepareTest(t)
+
+	container := newTestContainer()
+	MustProvideTo[*testService](container, func() *testService {
+		return &testService{ID: "base"}
+	})
+
+	restoreOuter := MustOverrideInContainer[*testService](container, func() (*testService, error) {
+		return &testService{ID: "outer"}, nil
+	})
+
+	value, err := ResolveFrom[*testService](container)
+	if err != nil {
+		t.Fatalf("resolve with outer override failed: %v", err)
+	}
+	if value.ID != "outer" {
+		t.Fatalf("expected outer override to win before nesting, got %#v", value)
+	}
+
+	restoreInner := MustOverrideInContainer[*testService](container, func() (*testService, error) {
+		return &testService{ID: "inner"}, nil
+	})
+
+	value, err = ResolveFrom[*testService](container)
+	if err != nil {
+		t.Fatalf("resolve with inner override failed: %v", err)
+	}
+	if value.ID != "inner" {
+		t.Fatalf("expected inner override to win while installed, got %#v", value)
+	}
+
+	restoreInner()
+
+	value, err = ResolveFrom[*testService](container)
+	if err != nil {
+		t.Fatalf("resolve after inner restore failed: %v", err)
+	}
+	if value.ID != "outer" {
+		t.Fatalf("expected restoring the inner override to reveal the previous override, got %#v", value)
+	}
+
+	restoreOuter()
+
+	value, err = ResolveFrom[*testService](container)
+	if err != nil {
+		t.Fatalf("resolve after restoring all overrides failed: %v", err)
+	}
+	if value.ID != "base" {
+		t.Fatalf("expected restoring the outer override to reveal the bound instance, got %#v", value)
+	}
+}

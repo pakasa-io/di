@@ -1,9 +1,18 @@
 package di
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
+
+type autoWireCycleDeps struct {
+	Consumer *autoWireCycleConsumer
+}
+
+type autoWireCycleConsumer struct {
+	Deps autoWireCycleDeps
+}
 
 func TestStructAutoWiringDisabledByDefault(t *testing.T) {
 	prepareTest(t)
@@ -138,5 +147,31 @@ func TestStructAutoWiringEnvEnablesNewContainers(t *testing.T) {
 	}
 	if value.Deps.Service == nil || value.Deps.Service.ID != "svc" {
 		t.Fatalf("unexpected env auto-wired value: %#v", value)
+	}
+}
+
+func TestStructAutoWiringDetectsCyclesDuringResolutionAndValidation(t *testing.T) {
+	prepareTest(t)
+	container := newTestContainer()
+	container.SetStructAutoWiring(true)
+
+	MustProvideTo[*autoWireCycleConsumer](container, func(deps autoWireCycleDeps) *autoWireCycleConsumer {
+		return &autoWireCycleConsumer{Deps: deps}
+	})
+
+	_, err := ResolveFrom[*autoWireCycleConsumer](container)
+	if !errors.Is(err, ErrCircularDependency) {
+		t.Fatalf("expected Resolve to fail with ErrCircularDependency, got %v", err)
+	}
+	if !strings.Contains(err.Error(), getType[*autoWireCycleConsumer]().String()) || !strings.Contains(err.Error(), getType[autoWireCycleDeps]().String()) {
+		t.Fatalf("expected resolution cycle trace to include both the binding and auto-wired struct, got %v", err)
+	}
+
+	err = container.Validate()
+	if !errors.Is(err, ErrCircularDependency) {
+		t.Fatalf("expected Validate to fail with ErrCircularDependency, got %v", err)
+	}
+	if !strings.Contains(err.Error(), getType[*autoWireCycleConsumer]().String()) || !strings.Contains(err.Error(), getType[autoWireCycleDeps]().String()) {
+		t.Fatalf("expected validation cycle trace to include both the binding and auto-wired struct, got %v", err)
 	}
 }

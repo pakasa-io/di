@@ -163,3 +163,40 @@ func TestScopeValidateUsesNearestVisibleOverride(t *testing.T) {
 		t.Fatal("expected override-backed resolution to return a value")
 	}
 }
+
+func TestScopeValidateIgnoresParentAliasCollisionShadowedByChildOverride(t *testing.T) {
+	prepareTest(t)
+
+	parent := newTestContainer()
+	MustProvideAsTo[*testAliasImpl, testAlias](parent, func() *testAliasImpl {
+		return &testAliasImpl{}
+	}, WithName("shared"))
+	MustProvideAsTo[*testAliasImpl2, testAlias](parent, func() *testAliasImpl2 {
+		return &testAliasImpl2{}
+	}, WithName("shared"))
+
+	if err := parent.Validate(); err == nil {
+		t.Fatal("expected parent validation to fail for duplicate alias bindings")
+	}
+
+	child := MustNewOverlayContainer(parent)
+	restore := MustOverrideInContainer[testAlias](child, func() (testAlias, error) {
+		return &overrideAlias{id: "override-shared"}, nil
+	}, WithName("shared"))
+	defer restore()
+
+	scope := child.MustNewScope()
+	defer scope.Close()
+
+	if err := scope.ValidateBindings(); err != nil {
+		t.Fatalf("expected scope validation to honor the nearer alias override, got %v", err)
+	}
+
+	value, err := ResolveNamedInScope[testAlias](scope, "shared")
+	if err != nil {
+		t.Fatalf("ResolveNamedInScope failed: %v", err)
+	}
+	if value.AliasID() != "override-shared" {
+		t.Fatalf("expected scope resolution to use the child alias override, got %#v", value)
+	}
+}

@@ -308,6 +308,7 @@ func (c *Container) collectVisibleAliasValidationIssues() []error {
 	}
 
 	resolved := make(map[aliasKey]bool)
+	shadowed := make(map[string]bool)
 	var issues []error
 
 	for current := c; current != nil; current = current.hierarchyState.Parent {
@@ -318,6 +319,10 @@ func (c *Container) collectVisibleAliasValidationIssues() []error {
 
 		current.mu.RLock()
 		local := make(map[aliasKey]localAliasCount)
+		localOverrides := make(map[string]bool, len(current.runtimeState.Overrides))
+		for key := range current.runtimeState.Overrides {
+			localOverrides[key] = true
+		}
 		for _, key := range current.registryState.BindingOrder {
 			b, ok := current.registryState.Bindings[key]
 			if !ok || b == nil || b.interfaceFor == nil {
@@ -330,8 +335,11 @@ func (c *Container) collectVisibleAliasValidationIssues() []error {
 			}
 
 			overrideKey := cacheKey(b.interfaceFor, b.name)
-			if _, overridden := current.runtimeState.Overrides[overrideKey]; overridden {
-				resolved[alias] = true
+			if shadowed[overrideKey] {
+				continue
+			}
+			if localOverrides[overrideKey] {
+				shadowed[overrideKey] = true
 				continue
 			}
 
@@ -342,6 +350,9 @@ func (c *Container) collectVisibleAliasValidationIssues() []error {
 		}
 		current.mu.RUnlock()
 
+		for key := range localOverrides {
+			shadowed[key] = true
+		}
 		for alias, entry := range local {
 			resolved[alias] = true
 			if len(entry.bindings) < 2 {
